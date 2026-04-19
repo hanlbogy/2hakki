@@ -28,26 +28,29 @@
         const db = firebase.firestore();
         const appId = 'class-booking-app-2026';
 
+        // 학년별로 데이터를 분리하고, 불필요한 학급수 정보는 화면에서 제거했습니다.
         const rawSchools = [
-            { id: '1', name: '광신중', program: '사전교육', date: '09/03', day: '목', time: '13:00~13:45', target: '3학급', info: '비전' },
-            { id: '2', name: '서울문영여중', program: '사전교육', date: '09/10', day: '목', time: '09:55~11:35', target: '3학급', info: '비전, 안전' },
-            { id: '3', name: '서울문영여중', program: '사후교육', date: '09/11', day: '금', time: '08:55~10:35', target: '3학급', info: '사후교육' },
-            { id: '4', name: '청룡초', program: 'MBTI/직업가치관', date: '09/15', day: '화', time: '09:00~10:30', target: '5-6학년', info: '5학년 2학급 / 6학년 3학급' },
-            { id: '5', name: '당곡초', program: '진로마을의 비밀', date: '09/15', day: '화', time: '09:00~10:30', target: '2학년', info: '2학급' },
-            { id: '6', name: '당곡초', program: '다중지능(1)', date: '09/16', day: '수', time: '09:00~10:30', target: '4학년', info: '2학급' },
-            { id: '7', name: '당곡초', program: '다중지능(2)', date: '09/16', day: '수', time: '10:40~12:10', target: '4학년', info: '2학급' },
-            { id: '8', name: '당곡초', program: '진로마을의 보물(1)', date: '09/17', day: '목', time: '09:00~10:30', target: '1학년', info: '1학급' },
-            { id: '9', name: '당곡초', program: '진로마을의 보물(2)', date: '09/17', day: '목', time: '10:40~12:10', target: '1학년', info: '1학급' },
-            { id: '10', name: '당곡초', program: '홀랜드(1)', date: '09/17', day: '목', time: '09:00~10:30', target: '3학년', info: '1학급' },
-            { id: '11', name: '당곡초', program: '홀랜드(2)', date: '09/17', day: '목', time: '10:40~12:10', target: '3학년', info: '2학급' },
-            { id: '12', name: '관악초', program: '다중지능', date: '09/28', day: '월', time: '09:00~12:30', target: '3학년', info: '4학급' },
-            { id: '13', name: '난우중', program: '사전교육', date: '09/28', day: '월', time: '14:20~15:05', target: '6학급', info: '안전' },
-            { id: '14', name: '난우중', program: '사후교육', date: '10/01', day: '목', time: '14:20~16:00', target: '6학급', info: '사후교육' },
-            { id: '15', name: '봉원중', program: '사전교육', date: '10/12', day: '월', time: '09:00~09:45', target: '6학급', info: '안전' },
-            { id: '16', name: '원신초', program: 'MBTI 성격유형', date: '10/22', day: '목', time: '12:50~14:20', target: '5학년', info: '2학급' },
-            { id: '17', name: '관악초', program: 'MBTI 성격유형', date: '10/30', day: '금', time: '09:00~12:30', target: '4학년', info: '4학급' },
-            { id: '18', name: '봉현초', program: '직업가치관', date: '11/19', day: '목', time: '12:50~14:20', target: '5-6학년', info: '각 6학급' },
-            { id: '19', name: '봉원중', program: '사후교육', date: '12/21', day: '월', time: '13:20~14:30', target: '6학급', info: '사후교육' }
+            { id: '1', name: '광신중', program: '사전교육', date: '09/03', day: '목', time: '13:00~13:45', grade: '중등' },
+            { id: '2', name: '서울문영여중', program: '사전교육', date: '09/10', day: '목', time: '09:55~11:35', grade: '중등' },
+            { id: '3', name: '서울문영여중', program: '사후교육', date: '09/11', day: '금', time: '08:55~10:35', grade: '중등' },
+            { id: '4_1', name: '청룡초', program: 'MBTI 성격', date: '09/15', day: '화', time: '09:00~10:30', grade: '5학년' },
+            { id: '4_2', name: '청룡초', program: '직업가치관', date: '09/15', day: '화', time: '09:00~10:30', grade: '6학년' },
+            { id: '5', name: '당곡초', program: '진로마을의 비밀', date: '09/15', day: '화', time: '09:00~10:30', grade: '2학년' },
+            { id: '6', name: '당곡초', program: '다중지능(1)', date: '09/16', day: '수', time: '09:00~10:30', grade: '4학년' },
+            { id: '7', name: '당곡초', program: '다중지능(2)', date: '09/16', day: '수', time: '10:40~12:10', grade: '4학년' },
+            { id: '8', name: '당곡초', program: '진로마을의 보물(1)', date: '09/17', day: '목', time: '09:00~10:30', grade: '1학년' },
+            { id: '9', name: '당곡초', program: '진로마을의 보물(2)', date: '09/17', day: '목', time: '10:40~12:10', grade: '1학년' },
+            { id: '10', name: '당곡초', program: '홀랜드(1)', date: '09/17', day: '목', time: '09:00~10:30', grade: '3학년' },
+            { id: '11', name: '당곡초', program: '홀랜드(2)', date: '09/17', day: '목', time: '10:40~12:10', grade: '3학년' },
+            { id: '12', name: '관악초', program: '다중지능', date: '09/28', day: '월', time: '09:00~12:30', grade: '3학년' },
+            { id: '13', name: '난우중', program: '사전교육', date: '09/28', day: '월', time: '14:20~15:05', grade: '중등' },
+            { id: '14', name: '난우중', program: '사후교육', date: '10/01', day: '목', time: '14:20~16:00', grade: '중등' },
+            { id: '15', name: '봉원중', program: '사전교육', date: '10/12', day: '월', time: '09:00~09:45', grade: '중등' },
+            { id: '16', name: '원신초', program: 'MBTI 성격유형', date: '10/22', day: '목', time: '12:50~14:20', grade: '5학년' },
+            { id: '17', name: '관악초', program: 'MBTI 성격유형', date: '10/30', day: '금', time: '09:00~12:30', grade: '4학년' },
+            { id: '18_1', name: '봉현초', program: '직업가치관', date: '11/19', day: '목', time: '12:50~14:20', grade: '5학년' },
+            { id: '18_2', name: '봉현초', program: '직업가치관', date: '11/19', day: '목', time: '12:50~14:20', grade: '6학년' },
+            { id: '19', name: '봉원중', program: '사후교육', date: '12/21', day: '월', time: '13:20~14:30', grade: '중등' }
         ];
 
         let userName = localStorage.getItem('class_app_user_name') || '';
@@ -82,7 +85,6 @@
 
         window.toggleBooking = async (schoolId) => {
             if (!userName || !currentUser) return;
-            // 오직 내 이름으로 된 신청 내역만 찾습니다.
             const myBooking = allBookings.find(b => b.schoolId === schoolId && b.userName === userName);
             
             if (myBooking) {
@@ -91,11 +93,12 @@
                 }
             } else {
                 const school = rawSchools.find(s => s.id === schoolId);
-                if (confirm(`[${school.name}] 수업을 희망 신청하시겠습니까?`)) {
+                if (confirm(`[${school.name} ${school.grade}] 수업을 희망 신청하시겠습니까?`)) {
                     await db.collection(appId).doc('public').collection('bookings').doc(`${schoolId}_${currentUser.uid}`).set({
                         schoolId: schoolId,
                         schoolName: school.name,
                         program: school.program,
+                        grade: school.grade,
                         userName: userName,
                         userId: currentUser.uid,
                         timestamp: Date.now()
@@ -113,10 +116,10 @@
 
         window.copyForGoogleSheets = () => {
             if (!isAdmin) return;
-            let tsvContent = "학교명\t프로그램\t날짜\t시간\t대상\t신청자\t신청일시\n";
+            let tsvContent = "학교명\t프로그램\t학년\t날짜\t시간\t신청자\t신청일시\n";
             allBookings.sort((a,b) => a.timestamp - b.timestamp).forEach(b => {
                 const school = rawSchools.find(s => s.id === b.schoolId) || {};
-                tsvContent += `${school.name}\t${school.program}\t${school.date}\t${school.time}\t${school.target}\t${b.userName}\t${new Date(b.timestamp).toLocaleString()}\n`;
+                tsvContent += `${school.name}\t${school.program}\t${school.grade}\t${school.date}\t${school.time}\t${b.userName}\t${new Date(b.timestamp).toLocaleString()}\n`;
             });
             const textarea = document.createElement('textarea');
             textarea.value = tsvContent;
@@ -152,7 +155,6 @@
             render();
         };
 
-        // 관리자 비밀번호 검증 (힌트 제거)
         window.verifyAdminPw = (e) => {
             if(e) e.preventDefault();
             const pw = document.getElementById('adminPwInput').value;
@@ -206,7 +208,6 @@
             </div>`;
         }
 
-        // 비밀번호 입력 화면 (어디에도 힌트가 없습니다)
         function getAdminLoginHTML() {
             return `
             <div class="flex flex-col items-center justify-center min-h-[100dvh] bg-gray-900 px-6">
@@ -229,7 +230,6 @@
         }
 
         function renderSchoolCard(school, isTimeline = false) {
-            // 철저한 블라인드: 오직 '내'가 신청한 내역만 확인하여 UI에 표시합니다.
             const isMyBooking = allBookings.some(b => b.schoolId === school.id && b.userName === userName);
 
             return `
@@ -240,7 +240,7 @@
                 ${isMyBooking ? '<div class="absolute top-0 right-0 bg-indigo-500 text-white text-[10px] font-bold px-3 py-1.5 rounded-bl-xl shadow-sm">내 희망 수업 ✓</div>' : ''}
                 
                 <div class="flex flex-wrap items-center gap-1.5 mb-3 pr-12">
-                    <span class="px-2 py-1 bg-gray-800 text-white text-[10px] font-bold rounded-md leading-none">${school.target}</span>
+                    <span class="px-2 py-1 bg-gray-800 text-white text-[10px] font-bold rounded-md leading-none">${school.grade}</span>
                     <span class="px-2 py-1 bg-indigo-100 text-indigo-700 text-[10px] font-bold rounded-md leading-none">${school.program}</span>
                 </div>
                 
@@ -251,7 +251,6 @@
                         <span class="mr-1">⏰</span> ${school.time}
                     </div>
                     ${!isTimeline ? `<div class="flex items-center text-gray-600 font-medium"><span class="mr-1">📅</span> ${school.date} (${school.day})</div>` : ''}
-                    <div class="text-gray-400 font-medium text-xs mt-1 truncate">${school.info}</div>
                 </div>
             </div>`;
         }
@@ -319,7 +318,7 @@
                         <div class="absolute top-0 right-0 p-3 bg-indigo-50 text-indigo-600 text-[10px] font-black rounded-bl-2xl shadow-sm">${s.bookings.length}명 지원</div>
                         <div class="mb-4 pr-16">
                             <span class="inline-block px-2 py-1 bg-gray-100 text-gray-600 text-[10px] font-bold rounded mb-2">${s.date} (${s.day})</span>
-                            <h2 class="font-black text-base text-gray-900">${s.name}</h2>
+                            <h2 class="font-black text-base text-gray-900">${s.name} <span class="text-xs text-gray-500 font-medium ml-1">${s.grade}</span></h2>
                             <p class="text-xs font-bold text-indigo-600 mt-1">${s.program}</p>
                         </div>
                         <div class="space-y-2 mt-4">

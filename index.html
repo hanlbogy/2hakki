@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>2026 하반기 수업 신청</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyDDQoegaPeFWypWdVsgRmzMr_Z7J6dwQt8",
+            authDomain: "labor-7b138.firebaseapp.com",
+            projectId: "labor-7b138",
+            storageBucket: "labor-7b138.firebasestorage.app",
+            messagingSenderId: "598653631387",
+            appId: "1:598653631387:web:cd950619198fa209f97f3e",
+            measurementId: "G-Y2JX4CVQVP"
+        };
+    
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+        const appId = 'class-booking-app-2026';
+
+        const rawSchools = [
+            { id: '1', name: '광신중', program: '사전교육', date: '09/03', day: '목', time: '13:00~13:45', target: '3학급', info: '비전' },
+            { id: '2', name: '서울문영여중', program: '사전교육', date: '09/10', day: '목', time: '09:55~11:35', target: '3학급', info: '비전, 안전' },
+            { id: '3', name: '서울문영여중', program: '사후교육', date: '09/11', day: '금', time: '08:55~10:35', target: '3학급', info: '사후교육' },
+            { id: '4', name: '청룡초', program: 'MBTI/직업가치관', date: '09/15', day: '화', time: '09:00~10:30', target: '5-6학년', info: '5학년 2학급 / 6학년 3학급' },
+            { id: '5', name: '당곡초', program: '진로마을의 비밀', date: '09/15', day: '화', time: '09:00~10:30', target: '2학년', info: '2학급' },
+            { id: '6', name: '당곡초', program: '다중지능(1)', date: '09/16', day: '수', time: '09:00~10:30', target: '4학년', info: '2학급' },
+            { id: '7', name: '당곡초', program: '다중지능(2)', date: '09/16', day: '수', time: '10:40~12:10', target: '4학년', info: '2학급' },
+            { id: '8', name: '당곡초', program: '진로마을의 보물(1)', date: '09/17', day: '목', time: '09:00~10:30', target: '1학년', info: '1학급' },
+            { id: '9', name: '당곡초', program: '진로마을의 보물(2)', date: '09/17', day: '목', time: '10:40~12:10', target: '1학년', info: '1학급' },
+            { id: '10', name: '당곡초', program: '홀랜드(1)', date: '09/17', day: '목', time: '09:00~10:30', target: '3학년', info: '1학급' },
+            { id: '11', name: '당곡초', program: '홀랜드(2)', date: '09/17', day: '목', time: '10:40~12:10', target: '3학년', info: '2학급' },
+            { id: '12', name: '관악초', program: '다중지능', date: '09/28', day: '월', time: '09:00~12:30', target: '3학년', info: '4학급' },
+            { id: '13', name: '난우중', program: '사전교육', date: '09/28', day: '월', time: '14:20~15:05', target: '6학급', info: '안전' },
+            { id: '14', name: '난우중', program: '사후교육', date: '10/01', day: '목', time: '14:20~16:00', target: '6학급', info: '사후교육' },
+            { id: '15', name: '봉원중', program: '사전교육', date: '10/12', day: '월', time: '09:00~09:45', target: '6학급', info: '안전' },
+            { id: '16', name: '원신초', program: 'MBTI 성격유형', date: '10/22', day: '목', time: '12:50~14:20', target: '5학년', info: '2학급' },
+            { id: '17', name: '관악초', program: 'MBTI 성격유형', date: '10/30', day: '금', time: '09:00~12:30', target: '4학년', info: '4학급' },
+            { id: '18', name: '봉현초', program: '직업가치관', date: '11/19', day: '목', time: '12:50~14:20', target: '5-6학년', info: '각 6학급' },
+            { id: '19', name: '봉원중', program: '사후교육', date: '12/21', day: '월', time: '13:20~14:30', target: '6학급', info: '사후교육' }
+        ];
+
+        let userName = localStorage.getItem('class_app_user_name') || '';
+        let isAdmin = false;
+        let currentViewMode = 'timeline';
+        let allBookings = []; 
+        let currentUser = null;
+
+        async function initApp() {
+            try {
+                const cred = await auth.signInAnonymously();
+                currentUser = cred.user;
+                subscribeToData();
+                render();
+            } catch (error) {
+                console.error("인증 실패:", error);
+                document.getElementById('app').innerHTML = `<div class="flex h-screen items-center justify-center text-red-500 font-bold">네트워크 연결을 확인해주세요.</div>`;
+            }
+        }
+
+        function subscribeToData() {
+            db.collection(appId).doc('public').collection('bookings')
+                .onSnapshot((snapshot) => {
+                    allBookings = [];
+                    snapshot.forEach(doc => {
+                        allBookings.push({ docId: doc.id, ...doc.data() });
+                    });
+                    render();
+                });
+        }
+
+        window.toggleBooking = async (schoolId) => {
+            if (!userName || !currentUser) return;
+            const myBooking = allBookings.find(b => b.schoolId === schoolId && b.userName === userName);
+            
+            if (myBooking) {
+                if (confirm(`신청을 취소하시겠습니까?`)) {
+                    await db.collection(appId).doc('public').collection('bookings').doc(myBooking.docId).delete();
+                }
+            } else {
+                const school = rawSchools.find(s => s.id === schoolId);
+                if (confirm(`[${school.name}] 수업을 신청할까요?`)) {
+                    await db.collection(appId).doc('public').collection('bookings').doc(`${schoolId}_${currentUser.uid}`).set({
+                        schoolId: schoolId,
+                        schoolName: school.name,
+                        program: school.program,
+                        userName: userName,
+                        userId: currentUser.uid,
+                        timestamp: Date.now()
+                    });
+                }
+            }
+        };
+
+        window.adminCancel = async (docId) => {
+            if (!isAdmin) return;
+            if (confirm("배정을 취소하시겠습니까?")) {
+                await db.collection(appId).doc('public').collection('bookings').doc(docId).delete();
+            }
+        };
+
+        window.copyForGoogleSheets = () => {
+            if (!isAdmin) return;
+            let tsvContent = "학교명\t프로그램\t날짜\t시간\t대상\t신청자\t신청일시\n";
+            allBookings.sort((a,b) => a.timestamp - b.timestamp).forEach(b => {
+                const school = rawSchools.find(s => s.id === b.schoolId) || {};
+                tsvContent += `${school.name}\t${school.program}\t${school.date}\t${school.time}\t${school.target}\t${b.userName}\t${new Date(b.timestamp).toLocaleString()}\n`;
+            });
+            const textarea = document.createElement('textarea');
+            textarea.value = tsvContent;
+            document.body.appendChild(textarea);
+            textarea.select();
+            document.execCommand('copy');
+            alert('데이터가 복사되었습니다. 엑셀이나 시트에 붙여넣기 하세요.');
+            document.body.removeChild(textarea);
+        };
+
+        window.handleLogin = (e) => {
+            if(e) e.preventDefault();
+            const input = document.getElementById('userNameInput').value.trim();
+            if (input) {
+                userName = input;
+                localStorage.setItem('class_app_user_name', userName);
+                render();
+            }
+        };
+
+        window.toggleAdmin = () => {
+            if (!isAdmin) {
+                const pw = prompt('관리자 비밀번호 입력 (2027)');
+                if (pw === "2027") isAdmin = true;
+                else if (pw !== null) alert('비밀번호가 일치하지 않습니다.');
+            } else {
+                isAdmin = false;
+            }
+            render();
+        };
+
+        window.setViewMode = (mode) => { currentViewMode = mode; render(); };
+        
+        window.logout = () => { 
+            if(confirm('로그아웃 하시겠습니까?')) {
+                localStorage.removeItem('class_app_user_name'); 
+                userName = ''; 
+                isAdmin = false; 
+                render(); 
+            }
+        };
+
+        function render() {
+            const app = document.getElementById('app');
+            if (!userName) app.innerHTML = getLoginHTML();
+            else if (isAdmin) app.innerHTML = getAdminHTML();
+            else app.innerHTML = getMainHTML();
+        }
+
+        function getLoginHTML() {
+            return `
+            <div class="flex flex-col items-center justify-center min-h-[100dvh] bg-gray-50 px-6">
+                <div class="w-full max-w-sm bg-white p-8 rounded-[2rem] shadow-xl border border-gray-100/50">
+                    <div class="w-16 h-16 bg-indigo-600 text-white rounded-2xl mx-auto mb-6 flex items-center justify-center shadow-lg shadow-indigo-200 text-2xl">📝</div>
+                    <h1 class="text-2xl font-black text-gray-800 text-center tracking-tight mb-2">하반기 수업 신청</h1>
+                    <p class="text-xs text-gray-400 text-center mb-8 font-medium">강사 전용 배정 시스템</p>
+                    
+                    <form onsubmit="handleLogin(event)" class="space-y-4">
+                        <input type="text" id="userNameInput" placeholder="강사님 성함을 입력해주세요" autocomplete="off" required
+                            class="w-full px-5 py-4 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 font-bold text-center transition-all text-base placeholder:font-normal">
+                        <button type="submit" 
+                            class="w-full bg-indigo-600 text-white py-4 rounded-xl font-bold text-base shadow-lg shadow-indigo-200 active:scale-[0.98] transition-transform">
+                            접속하기
+                        </button>
+                    </form>
+                </div>
+            </div>`;
+        }
+
+        function renderSchoolCard(school, isTimeline = false) {
+            const isMyBooking = allBookings.some(b => b.schoolId === school.id && b.userName === userName);
+
+            return `
+            <div onclick="toggleBooking('${school.id}')" 
+                class="relative p-5 rounded-2xl transition-all cursor-pointer select-none active:scale-[0.98]
+                ${isMyBooking ? 'bg-indigo-50 border-2 border-indigo-500 shadow-md' : 'bg-white border border-gray-200 shadow-sm'}">
+                
+                ${isMyBooking ? '<div class="absolute top-0 right-0 bg-indigo-500 text-white text-[10px] font-bold px-3 py-1.5 rounded-bl-xl shadow-sm">내 신청 ✓</div>' : ''}
+                
+                <div class="flex flex-wrap items-center gap-1.5 mb-3 pr-12">
+                    <span class="px-2 py-1 bg-gray-800 text-white text-[10px] font-bold rounded-md leading-none">${school.target}</span>
+                    <span class="px-2 py-1 bg-indigo-100 text-indigo-700 text-[10px] font-bold rounded-md leading-none">${school.program}</span>
+                </div>
+                
+                <h3 class="text-lg font-black text-gray-900 mb-1 tracking-tight">${school.name}</h3>
+                
+                <div class="mt-3 pt-3 border-t ${isMyMyBooking ? 'border-indigo-100' : 'border-gray-100'} flex flex-col gap-1 text-[13px]">
+                    <div class="flex items-center text-indigo-600 font-bold">
+                        <span class="mr-1">⏰</span> ${school.time}
+                    </div>
+                    ${!isTimeline ? `<div class="flex items-center text-gray-600 font-medium"><span class="mr-1">📅</span> ${school.date} (${school.day})</div>` : ''}
+                    <div class="text-gray-400 font-medium text-xs mt-1 truncate">${school.info}</div>
+                </div>
+            </div>`;
+        }
+
+        function getMainHTML() {
+            const grouped = {};
+            rawSchools.forEach(s => { if(!grouped[s.date]) grouped[s.date] = []; grouped[s.date].push(s); });
+            const dates = Object.keys(grouped).sort();
+
+            return `
+            <div class="min-h-[100dvh] bg-gray-50 pb-20">
+                <header class="bg-white/90 backdrop-blur-md px-5 py-4 shadow-sm sticky top-0 z-30 flex justify-between items-center border-b border-gray-200">
+                    <div class="flex flex-col">
+                        <span class="text-[10px] font-bold text-indigo-600 uppercase tracking-wider mb-0.5">${userName} 강사님</span>
+                        <h1 class="text-base font-black text-gray-900 tracking-tight">수업 일정 신청</h1>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="toggleAdmin()" class="w-9 h-9 flex items-center justify-center bg-gray-100 text-gray-600 rounded-full text-sm active:scale-90 transition-transform">⚙️</button>
+                        <button onclick="logout()" class="w-9 h-9 flex items-center justify-center bg-gray-100 text-gray-600 rounded-full text-sm active:scale-90 transition-transform">🚪</button>
+                    </div>
+                </header>
+
+                <div class="px-5 pt-6 pb-4">
+                    <div class="flex bg-gray-200 p-1 rounded-xl w-full max-w-xs mx-auto mb-8">
+                        <button onclick="setViewMode('timeline')" class="flex-1 py-2 text-xs font-bold rounded-lg transition-all ${currentViewMode==='timeline'?'bg-white text-indigo-600 shadow':'text-gray-500'}">날짜별 보기</button>
+                        <button onclick="setViewMode('card')" class="flex-1 py-2 text-xs font-bold rounded-lg transition-all ${currentViewMode==='card'?'bg-white text-indigo-600 shadow':'text-gray-500'}">전체 보기</button>
+                    </div>
+
+                    ${currentViewMode === 'timeline' ? 
+                        `<div class="space-y-10 max-w-md mx-auto">
+                            ${dates.map(d => `
+                            <div>
+                                <div class="flex items-center gap-3 mb-4 sticky top-[72px] bg-gray-50/95 py-2 z-20">
+                                    <h2 class="text-lg font-black text-gray-800 bg-gray-200/50 px-3 py-1 rounded-lg">${d}</h2>
+                                    <div class="h-px flex-1 bg-gray-200"></div>
+                                </div>
+                                <div class="grid grid-cols-1 gap-3">${grouped[d].map(s=>renderSchoolCard(s,true)).join('')}</div>
+                            </div>`).join('')}
+                        </div>` 
+                        : 
+                        `<div class="grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-2xl mx-auto">${rawSchools.map(s=>renderSchoolCard(s)).join('')}</div>`
+                    }
+                </div>
+            </div>`;
+        }
+
+        function getAdminHTML() {
+            const active = rawSchools.map(s => ({...s, bookings: allBookings.filter(b=>b.schoolId===s.id)})).filter(s=>s.bookings.length>0);
+            return `
+            <div class="min-h-[100dvh] bg-gray-100 pb-10">
+                <header class="bg-gray-900 px-5 py-6 sticky top-0 z-30 shadow-md">
+                    <div class="flex justify-between items-center mb-4">
+                        <div>
+                            <h1 class="font-black text-lg text-white">관리자 대시보드</h1>
+                            <p class="text-[10px] text-indigo-400 font-bold mt-1">실시간 배정 현황</p>
+                        </div>
+                        <button onclick="toggleAdmin()" class="w-8 h-8 flex items-center justify-center bg-gray-800 text-white rounded-full text-xs">✕</button>
+                    </div>
+                    <button onclick="copyForGoogleSheets()" class="w-full py-3 bg-indigo-600 text-white rounded-xl text-sm font-bold active:scale-[0.98] transition-transform">데이터 복사 (엑셀용)</button>
+                </header>
+
+                <div class="px-4 mt-6 max-w-3xl mx-auto space-y-4">
+                    ${active.length > 0 ? active.map(s => `
+                    <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-200">
+                        <div class="flex justify-between items-start mb-4">
+                            <div>
+                                <span class="inline-block px-2 py-1 bg-gray-100 text-gray-600 text-[10px] font-bold rounded mb-2">${s.date} (${s.day})</span>
+                                <h2 class="font-black text-base text-gray-900">${s.name}</h2>
+                                <p class="text-xs font-bold text-indigo-600 mt-1">${s.program}</p>
+                            </div>
+                            <div class="bg-indigo-50 text-indigo-600 px-3 py-1.5 rounded-lg text-xs font-black">${s.bookings.length}명</div>
+                        </div>
+                        <div class="space-y-2 mt-4">
+                            ${s.bookings.map(b => `
+                            <div class="flex justify-between items-center bg-gray-50 p-3 rounded-xl border border-gray-100">
+                                <div class="flex flex-col">
+                                    <span class="text-[13px] font-bold text-gray-800">${b.userName}</span>
+                                    <span class="text-[9px] text-gray-400 mt-0.5">${new Date(b.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                                </div>
+                                <button onclick="adminCancel('${b.docId}')" class="px-3 py-1.5 bg-red-50 text-red-600 text-[11px] font-bold rounded-lg active:scale-95">취소</button>
+                            </div>`).join('')}
+                        </div>
+                    </div>`).join('') : '<div class="text-center py-20 text-gray-400 font-bold text-sm">신청 내역이 없습니다.</div>'}
+                </div>
+            </div>`;
+        }
+
+        window.onload = initApp;
+    </script>
+    <style>
+        /* Pretendard 폰트 적용 (모바일 가독성 최고) */
+        @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
+        body { 
+            font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, 'Helvetica Neue', 'Segoe UI', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif; 
+            -webkit-font-smoothing: antialiased; 
+            -webkit-tap-highlight-color: transparent; /* 모바일 터치 시 파란 박스 제거 */
+        }
+        /* 스크롤바 숨기기 (앱처럼 보이게) */
+        ::-webkit-scrollbar { display: none; }
+        * { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-900">
+    <div id="app">
+        <div class="flex flex-col items-center justify-center min-h-[100dvh]">
+            <div class="w-10 h-10 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin mb-4"></div>
+            <p class="text-indigo-600 text-[11px] font-bold tracking-widest animate-pulse">로딩중...</p>
+        </div>
+    </div>
+</body>
+</html>

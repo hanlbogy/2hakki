@@ -52,6 +52,7 @@
 
         let userName = localStorage.getItem('class_app_user_name') || '';
         let isAdmin = false;
+        let showAdminLogin = false; // 관리자 로그인 화면 상태 추가
         let currentViewMode = 'timeline';
         let allBookings = []; 
         let currentUser = null;
@@ -135,15 +136,36 @@
             }
         };
 
+        // 기존 prompt 창 대신 직접 만든 화면 띄우기
         window.toggleAdmin = () => {
-            if (!isAdmin) {
-                const pw = prompt('관리자 비밀번호 입력 (2027)');
-                if (pw === "2027") isAdmin = true;
-                else if (pw !== null) alert('비밀번호가 일치하지 않습니다.');
-            } else {
+            if (isAdmin) {
                 isAdmin = false;
+                render();
+            } else {
+                showAdminLogin = true;
+                render();
             }
+        };
+
+        // 관리자 로그인 취소
+        window.cancelAdminLogin = () => {
+            showAdminLogin = false;
             render();
+        };
+
+        // 관리자 비밀번호 검증 로직
+        window.verifyAdminPw = (e) => {
+            if(e) e.preventDefault();
+            const pw = document.getElementById('adminPwInput').value;
+            if (pw === "2027") {
+                isAdmin = true;
+                showAdminLogin = false;
+                render();
+            } else {
+                alert('비밀번호가 일치하지 않습니다.');
+                document.getElementById('adminPwInput').value = '';
+                document.getElementById('adminPwInput').focus();
+            }
         };
 
         window.setViewMode = (mode) => { currentViewMode = mode; render(); };
@@ -159,7 +181,9 @@
 
         function render() {
             const app = document.getElementById('app');
-            if (!userName) app.innerHTML = getLoginHTML();
+            // 렌더링 우선순위: 1. 관리자 비번 입력 화면 -> 2. 로그인 전 화면 -> 3. 관리자 모드 -> 4. 일반 강사 모드
+            if (showAdminLogin) app.innerHTML = getAdminLoginHTML();
+            else if (!userName) app.innerHTML = getLoginHTML();
             else if (isAdmin) app.innerHTML = getAdminHTML();
             else app.innerHTML = getMainHTML();
         }
@@ -178,6 +202,28 @@
                         <button type="submit" 
                             class="w-full bg-indigo-600 text-white py-4 rounded-xl font-bold text-base shadow-lg shadow-indigo-200 active:scale-[0.98] transition-transform">
                             접속하기
+                        </button>
+                    </form>
+                </div>
+            </div>`;
+        }
+
+        // 새롭게 추가된 관리자 비밀번호 입력 화면 (input type="password" 적용)
+        function getAdminLoginHTML() {
+            return `
+            <div class="flex flex-col items-center justify-center min-h-[100dvh] bg-gray-900 px-6">
+                <div class="w-full max-w-sm bg-white p-8 rounded-[2rem] shadow-2xl relative">
+                    <button onclick="cancelAdminLogin()" class="absolute top-5 right-5 w-8 h-8 flex items-center justify-center bg-gray-100 text-gray-600 rounded-full text-xs font-bold active:scale-90 transition-transform">✕</button>
+                    <div class="w-16 h-16 bg-gray-800 text-white rounded-2xl mx-auto mb-6 flex items-center justify-center shadow-lg shadow-gray-200 text-2xl">🔒</div>
+                    <h1 class="text-2xl font-black text-gray-800 text-center tracking-tight mb-2">관리자 인증</h1>
+                    <p class="text-xs text-gray-400 text-center mb-8 font-medium">접근 권한 확인이 필요합니다</p>
+                    
+                    <form onsubmit="verifyAdminPw(event)" class="space-y-4">
+                        <input type="password" id="adminPwInput" placeholder="비밀번호" autocomplete="off" required autofocus
+                            class="w-full px-5 py-4 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:bg-white focus:border-gray-800 focus:ring-2 focus:ring-gray-200 font-black text-center transition-all text-xl tracking-[0.5em] placeholder:tracking-normal placeholder:font-normal placeholder:text-base">
+                        <button type="submit" 
+                            class="w-full bg-gray-800 text-white py-4 rounded-xl font-bold text-base shadow-lg shadow-gray-300 active:scale-[0.98] transition-transform">
+                            확인
                         </button>
                     </form>
                 </div>
